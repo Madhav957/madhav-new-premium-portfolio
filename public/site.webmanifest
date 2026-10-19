@@ -1,0 +1,15 @@
+{
+  "name": "Madhav Jayanti | Cloud Engineering & Developer Portfolio",
+  "short_name": "Madhav Jayanti",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "theme_color": "#08090B",
+  "background_color": "#08090B",
+  "display": "standalone",
+  "start_url": "/"
+}
