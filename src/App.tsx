@@ -5,6 +5,7 @@ import { CloudPilotSection } from './components/CloudPilotSection';
 import { ProjectsSection } from './components/ProjectsSection';
 import { AboutSection } from './components/AboutSection';
 import { SkillsSection } from './components/SkillsSection';
+import { ProblemSolvingSection } from './components/ProblemSolvingSection';
 import { JourneySection } from './components/JourneySection';
 import { ContactSection } from './components/ContactSection';
 import { Footer } from './components/Footer';
@@ -22,6 +23,7 @@ export const App: React.FC = () => {
         <ProjectsSection />
         <AboutSection />
         <SkillsSection />
+        <ProblemSolvingSection />
         <JourneySection />
         <ContactSection />
       </main>

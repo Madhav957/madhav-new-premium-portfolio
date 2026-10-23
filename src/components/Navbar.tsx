@@ -19,6 +19,7 @@ export const Navbar: React.FC = () => {
     { name: 'CloudPilot AI', href: '#cloudpilot' },
     { name: 'Projects', href: '#projects' },
     { name: 'Skills', href: '#skills' },
+    { name: 'Problem Solving', href: '#problem-solving' },
     { name: 'Journey', href: '#journey' },
     { name: 'Contact', href: '#contact' },
   ];
@@ -49,7 +50,7 @@ export const Navbar: React.FC = () => {
         </a>
 
         {/* Desktop Links */}
-        <nav className="hidden md:flex items-center gap-7" aria-label="Main Navigation">
+        <nav className="hidden md:flex items-center gap-5 lg:gap-7" aria-label="Main Navigation">
           {navLinks.map((link) => (
             <a
               key={link.name}

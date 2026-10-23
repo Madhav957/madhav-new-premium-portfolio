@@ -1,4 +1,4 @@
-import { Project, SkillCategory, JourneyMilestone, ArticlePreview } from '../types';
+import { Project, SkillCategory, JourneyMilestone, ArticlePreview, ProblemSolvingData } from '../types';
 
 export const personalInfo = {
   name: 'Madhav Jayanti',
@@ -18,8 +18,34 @@ export const personalInfo = {
   email: 'jssmadhav20@gmail.com',
   githubUrl: 'https://github.com/Madhav957',
   linkedinUrl: 'https://www.linkedin.com/in/madhav-jayanti-35ab46379/',
+  leetcodeUrl: 'https://leetcode.com/u/Mdhv20/',
   resumeUrl: '/Madhav_Jayanti_Resume.pdf',
   productionDomain: 'https://madhavjayanti.dev',
+};
+
+export const problemSolvingData: ProblemSolvingData = {
+  problemsSolved: 122,
+  primaryLanguage: 'Java',
+  leetcodeUrl: 'https://leetcode.com/u/Mdhv20/',
+  description:
+    'I strengthen my problem-solving skills through consistent practice with Data Structures and Algorithms, focusing on efficient solutions, edge cases, and algorithmic complexity. Java is my primary language for DSA practice.',
+  focusAreas: [
+    {
+      title: 'Algorithmic Thinking & Decomposition',
+      description:
+        'Deconstructing complex problem statements into modular steps, identifying edge cases, and selecting optimal data structures.',
+    },
+    {
+      title: 'Efficiency & Complexity Analysis',
+      description:
+        'Evaluating time and space complexity tradeoffs (Big-O) to write performant code suitable for high-throughput backends.',
+    },
+    {
+      title: 'Cloud & Backend Readiness',
+      description:
+        'Applying strong DSA foundations to real-world cloud services, in-memory structures, and distributed backend logic.',
+    },
+  ],
 };
 
 export const flagshipProject: Project = {

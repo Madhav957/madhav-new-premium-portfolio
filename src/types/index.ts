@@ -53,3 +53,14 @@ export interface SocialLink {
   iconName: 'github' | 'linkedin' | 'mail' | 'file-text';
   isExternal?: boolean;
 }
+
+export interface ProblemSolvingData {
+  problemsSolved: number;
+  primaryLanguage: string;
+  leetcodeUrl: string;
+  description: string;
+  focusAreas: {
+    title: string;
+    description: string;
+  }[];
+}
