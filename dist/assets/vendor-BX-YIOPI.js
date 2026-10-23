@@ -1,4 +1,4 @@
-import{r as _a}from"./icons-BT1rnddn.js";var Co={exports:{}},ve={},xo={exports:{}},_o={};/**
+import{r as _a}from"./icons-Bc_Yf62o.js";var Co={exports:{}},ve={},xo={exports:{}},_o={};/**
  * @license React
  * scheduler.production.min.js
  *

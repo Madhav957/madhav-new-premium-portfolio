@@ -1,8 +1,176 @@
-import React from 'react';
-import { Code2, Terminal, ExternalLink, Cpu, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Code2, Terminal, ExternalLink, Cpu, Check, Loader2, AlertCircle } from 'lucide-react';
 import { problemSolvingData } from '../data/portfolioData';
 
+interface CachedLeetCodeStats {
+  solvedCount: number;
+  timestamp: number;
+}
+
+type SyncStatus = 'loading' | 'live' | 'cached' | 'offline';
+
+const LEETCODE_USERNAME = 'Mdhv20';
+const BASELINE_PROBLEMS_SOLVED = problemSolvingData.problemsSolved || 122;
+const CACHE_KEY = `madhav_leetcode_stats_${LEETCODE_USERNAME}`;
+const REFRESH_INTERVAL_MS = 30 * 60 * 1000; // 30 minutes
+
+function getCachedStats(): CachedLeetCodeStats | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (
+      parsed &&
+      typeof parsed.solvedCount === 'number' &&
+      Number.isInteger(parsed.solvedCount) &&
+      parsed.solvedCount >= BASELINE_PROBLEMS_SOLVED &&
+      typeof parsed.timestamp === 'number'
+    ) {
+      return parsed as CachedLeetCodeStats;
+    }
+  } catch {
+    // Ignore localStorage access or JSON parse errors
+  }
+  return null;
+}
+
+function saveCachedStats(solvedCount: number) {
+  try {
+    if (typeof solvedCount === 'number' && Number.isInteger(solvedCount) && solvedCount >= BASELINE_PROBLEMS_SOLVED) {
+      const payload: CachedLeetCodeStats = {
+        solvedCount,
+        timestamp: Date.now(),
+      };
+      localStorage.setItem(CACHE_KEY, JSON.stringify(payload));
+    }
+  } catch {
+    // Ignore storage quota or disabled storage errors
+  }
+}
+
+function extractCountFromPayload(data: unknown): number | null {
+  if (!data || typeof data !== 'object') return null;
+  const obj = data as Record<string, unknown>;
+
+  // Format 1: alfa-leetcode-api (/Mdhv20/solved -> solvedProblem)
+  if (typeof obj.solvedProblem === 'number' && Number.isInteger(obj.solvedProblem) && obj.solvedProblem > 0) {
+    return obj.solvedProblem;
+  }
+
+  // Format 2: leetcode-api-faisalshohag (/Mdhv20 -> totalSolved)
+  if (typeof obj.totalSolved === 'number' && Number.isInteger(obj.totalSolved) && obj.totalSolved > 0) {
+    return obj.totalSolved;
+  }
+
+  // Format 3: acSubmissionNum array ([{ difficulty: 'All', count: 125 }])
+  if (Array.isArray(obj.acSubmissionNum)) {
+    const all = obj.acSubmissionNum.find(
+      (item): item is { difficulty: string; count: number } =>
+        Boolean(item) &&
+        typeof item === 'object' &&
+        item.difficulty === 'All' &&
+        typeof item.count === 'number' &&
+        Number.isInteger(item.count) &&
+        item.count > 0
+    );
+    if (all) return all.count;
+  }
+
+  return null;
+}
+
+async function fetchFromEndpoint(url: string, signal: AbortSignal): Promise<number> {
+  const res = await fetch(url, { signal });
+  if (!res.ok) {
+    throw new Error(`Endpoint returned status ${res.status}`);
+  }
+  const json = await res.json();
+  const count = extractCountFromPayload(json);
+  if (count === null || count < BASELINE_PROBLEMS_SOLVED) {
+    throw new Error('Payload did not contain a valid non-negative solved count');
+  }
+  return count;
+}
+
 export const ProblemSolvingSection: React.FC = () => {
+  // Initialize state with cache if available, otherwise baseline
+  const [solvedCount, setSolvedCount] = useState<number>(() => {
+    const cached = getCachedStats();
+    return cached ? cached.solvedCount : BASELINE_PROBLEMS_SOLVED;
+  });
+
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>(() => {
+    const cached = getCachedStats();
+    if (cached && Date.now() - cached.timestamp < REFRESH_INTERVAL_MS) {
+      return 'cached';
+    }
+    return 'loading';
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+    const controller = new AbortController();
+
+    const fetchLiveStats = async () => {
+      const endpoints = [
+        `https://alfa-leetcode-api.onrender.com/${LEETCODE_USERNAME}/solved`,
+        `https://leetcode-api-faisalshohag.vercel.app/${LEETCODE_USERNAME}`,
+      ];
+
+      setSyncStatus('loading');
+
+      let liveCount: number | null = null;
+
+      for (const endpoint of endpoints) {
+        try {
+          liveCount = await fetchFromEndpoint(endpoint, controller.signal);
+          break; // First successful endpoint wins
+        } catch {
+          // Continue to next endpoint on error
+        }
+      }
+
+      if (!isMounted) return;
+
+      if (liveCount !== null) {
+        setSolvedCount(liveCount);
+        setSyncStatus('live');
+        saveCachedStats(liveCount);
+      } else {
+        // Fetching failed: check last known valid count in cache
+        const cached = getCachedStats();
+        if (cached) {
+          setSolvedCount(cached.solvedCount);
+          setSyncStatus('cached');
+        } else {
+          setSolvedCount(BASELINE_PROBLEMS_SOLVED);
+          setSyncStatus('offline');
+        }
+      }
+    };
+
+    // Check if we need an immediate fetch or can rely on fresh cache
+    const cached = getCachedStats();
+    const isCacheFresh = cached && Date.now() - cached.timestamp < REFRESH_INTERVAL_MS;
+
+    if (!isCacheFresh) {
+      fetchLiveStats();
+    } else {
+      setSyncStatus('cached');
+    }
+
+    // Set up auto-refresh: no more than once every 30 minutes while page remains open
+    const intervalId = setInterval(() => {
+      fetchLiveStats();
+    }, REFRESH_INTERVAL_MS);
+
+    return () => {
+      isMounted = false;
+      controller.abort();
+      clearInterval(intervalId);
+    };
+  }, []);
+
   return (
     <section id="problem-solving" className="py-24 sm:py-32 bg-[#08090B] relative">
       <div className="max-w-6xl mx-auto px-6 sm:px-8">
@@ -40,7 +208,7 @@ export const ProblemSolvingSection: React.FC = () => {
                       LeetCode
                     </span>
                     <span className="text-xs font-mono text-[#71717A] block">
-                      @Mdhv20
+                      @{LEETCODE_USERNAME}
                     </span>
                   </div>
                 </div>
@@ -54,12 +222,48 @@ export const ProblemSolvingSection: React.FC = () => {
 
               {/* Main Metric Showcase */}
               <div className="my-8">
-                <span className="text-xs font-mono uppercase tracking-wider text-[#71717A] block mb-2">
-                  Problems Solved
-                </span>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-mono uppercase tracking-wider text-[#71717A]">
+                    Problems Solved
+                  </span>
+
+                  {/* Sync status indicator */}
+                  {syncStatus === 'loading' && (
+                    <span className="inline-flex items-center gap-1.5 text-[11px] font-mono text-[#6EA8FE]">
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      <span>Syncing live stats...</span>
+                    </span>
+                  )}
+                  {syncStatus === 'live' && (
+                    <span className="inline-flex items-center gap-1.5 text-[11px] font-mono text-emerald-400">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span>Live Sync</span>
+                    </span>
+                  )}
+                  {syncStatus === 'cached' && (
+                    <span className="inline-flex items-center gap-1.5 text-[11px] font-mono text-[#A1A1AA]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#6EA8FE]" />
+                      <span>Synced recently</span>
+                    </span>
+                  )}
+                  {syncStatus === 'offline' && (
+                    <span
+                      className="inline-flex items-center gap-1.5 text-[11px] font-mono text-amber-400/90"
+                      title="Live data temporarily unavailable. Showing confirmed baseline."
+                    >
+                      <AlertCircle className="w-3 h-3 text-amber-400/90" />
+                      <span>Live sync offline</span>
+                    </span>
+                  )}
+                </div>
+
                 <div className="flex items-baseline gap-3">
-                  <span className="text-5xl sm:text-6xl font-bold font-mono tracking-tight text-[#F5F5F7]">
-                    {problemSolvingData.problemsSolved}
+                  <span
+                    className={`text-5xl sm:text-6xl font-bold font-mono tracking-tight text-[#F5F5F7] transition-opacity duration-300 ${
+                      syncStatus === 'loading' ? 'opacity-70' : 'opacity-100'
+                    }`}
+                  >
+                    {solvedCount}
                   </span>
                   <span className="text-base sm:text-lg text-[#A1A1AA] font-normal">
                     Problems Solved on LeetCode
@@ -69,9 +273,17 @@ export const ProblemSolvingSection: React.FC = () => {
                 {/* Restrained progress-inspired graphic indicator */}
                 <div className="mt-6 p-3.5 rounded-xl bg-[#101216] border border-white/[0.04] flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        syncStatus === 'offline'
+                          ? 'bg-amber-400'
+                          : 'bg-emerald-400 animate-pulse'
+                      }`}
+                    />
                     <span className="text-xs font-medium text-[#F5F5F7]">
-                      Continuous Practice & Pattern Mastery
+                      {syncStatus === 'offline'
+                        ? 'Confirmed Baseline · Live sync unavailable'
+                        : 'Continuous Practice & Pattern Mastery'}
                     </span>
                   </div>
                   <span className="text-[11px] font-mono text-[#71717A]">
